@@ -5,67 +5,124 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111111">
 <link rel="manifest" href="manifest.json">
-<title>Russisch Karteikarten</title>
+<title>Russisch 2000</title>
 <style>
-*{box-sizing:border-box} body{margin:0;background:#f2f2f7;color:#111;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif}
-main{max-width:600px;margin:auto;min-height:100vh;padding:20px 16px 28px;display:flex;flex-direction:column}
-header{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:18px}
-.counter{color:#777;font-size:14px;font-weight:500}
-progress{width:100%;height:5px;margin:16px 0 22px;accent-color:#111}
-.card{background:white;border-radius:28px;min-height:440px;padding:34px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 10px 30px #00000012;text-align:center}
-.ru{font-size:52px;font-weight:750;letter-spacing:-1px}.roman{font-size:19px;color:#777;margin-top:8px}.de{font-size:27px;font-weight:650;margin-top:14px}
-.example{border-top:1px solid #eee;margin-top:28px;padding-top:22px;font-size:17px;line-height:1.45}.example small{display:block;color:#777;margin-top:7px}
-.speak{margin-top:25px;width:56px;height:56px;border-radius:50%;border:1px solid #ddd;background:#fff;font-size:23px}
-.hint{text-align:center;color:#888;font-size:13px;margin:18px 0}
-.actions{display:flex;gap:12px}.actions button{flex:1;padding:16px;border-radius:16px;font-size:16px;font-weight:650;border:1px solid #ddd;background:white}.actions .yes{background:#111;color:white;border-color:#111}.actions .no{color:#b00020}
-.hidden{visibility:hidden}
+*{box-sizing:border-box}body{margin:0;background:#f2f2f7;color:#111;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif}
+main{max-width:620px;margin:auto;min-height:100vh;padding:18px 16px 28px;display:flex;flex-direction:column}
+header{display:flex;justify-content:space-between;align-items:center;font-weight:750;font-size:18px}.counter{color:#777;font-size:13px;font-weight:500}
+.stats{display:flex;gap:8px;margin:12px 0}.stat{flex:1;background:#fff;border-radius:14px;padding:9px;text-align:center;font-size:12px;color:#777}.stat b{display:block;color:#111;font-size:16px;margin-top:2px}
+progress{width:100%;height:5px;margin:8px 0 18px;accent-color:#111}
+.card{background:#fff;border-radius:28px;min-height:430px;padding:30px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 10px 30px #00000012;text-align:center;cursor:pointer}
+.ru{font-size:50px;font-weight:750;letter-spacing:-1px}.roman{font-size:18px;color:#777;margin-top:8px}.de{font-size:28px;font-weight:650;margin-top:14px}.pos{font-size:12px;color:#999;margin-top:7px;text-transform:capitalize}
+.example{border-top:1px solid #eee;margin-top:25px;padding-top:19px;font-size:16px;line-height:1.45;color:#444}.example small{display:block;color:#888;margin-top:7px}
+.speak{margin-top:23px;width:54px;height:54px;border-radius:50%;border:1px solid #ddd;background:#fff;font-size:22px;cursor:pointer}
+.hint{text-align:center;color:#888;font-size:13px;margin:16px 0}.actions{display:flex;gap:10px}.actions button{flex:1;padding:15px;border-radius:16px;font-size:16px;font-weight:650;border:1px solid #ddd;background:#fff;cursor:pointer}.actions .yes{background:#111;color:#fff;border-color:#111}.actions .no{color:#b00020}
+.hidden{visibility:hidden}.footer{text-align:center;color:#aaa;font-size:11px;margin-top:15px}
 </style>
 </head>
-<body>
-<main>
+<body><main>
 <header><span>🇷🇺 Russisch</span><span class="counter" id="counter"></span></header>
-<progress id="progress" value="1" max="100"></progress>
+<div class="stats"><div class="stat">Heute<b id="today">0</b></div><div class="stat">Gelernt<b id="learned">0</b></div><div class="stat">Noch offen<b id="due">0</b></div></div>
+<progress id="progress" value="0" max="20"></progress>
 <section class="card" id="card">
-<div class="ru" id="ru"></div>
-<div class="roman" id="roman"></div>
-<div class="de" id="de"></div>
-<div class="example" id="example"></div>
-<button class="speak" id="speak" aria-label="Aussprache">🔊</button>
+<div class="ru" id="ru">Lade Wörter…</div><div class="roman" id="roman"></div><div class="de" id="de"></div><div class="pos" id="pos"></div>
+<div class="example" id="example"></div><button class="speak" id="speak" aria-label="Aussprache">🔊</button>
 </section>
 <div class="hint" id="hint">Tippen auf die Karte, um die Antwort zu sehen</div>
-<div class="actions hidden" id="actions">
-<button class="no" id="no">✕ Nochmal</button>
-<button class="yes" id="yes">✓ Gewusst</button>
-</div>
+<div class="actions hidden" id="actions"><button class="no" id="no">✕ Nochmal</button><button class="yes" id="yes">✓ Gewusst</button></div>
+<div class="footer">2.000 häufige russische Wörter · Fortschritt wird auf diesem Gerät gespeichert</div>
 </main>
 <script>
-let words=[], i=0, revealed=false;
+const SOURCE="https://gist.github.com/Umkus/5224b8ff035d06ce8e156c25fe6bbd78/raw/66de766d099afd1ae9f3d4f6c01e0afd9f607482/words.csv";
+const LIMIT=2000, DAILY=20;
+let words=[],queue=[],qIndex=0,revealed=false;
 const $=id=>document.getElementById(id);
-fetch("words.json").then(r=>r.json()).then(d=>{words=d; render()});
-function render(){
- const w=words[i]; revealed=false;
- $("ru").textContent=w.russian; $("roman").textContent=""; $("de").textContent="";
- $("example").innerHTML=""; $("actions").classList.add("hidden"); $("hint").textContent="Tippen auf die Karte, um die Antwort zu sehen";
- $("counter").textContent=`${i+1} / ${words.length}`; $("progress").max=words.length; $("progress").value=i+1;
+const state=JSON.parse(localStorage.getItem("ruSrs")||"{}");
+function save(){localStorage.setItem("ruSrs",JSON.stringify(state))}
+function todayKey(){return new Date().toISOString().slice(0,10)}
+function clean(s){return (s||"").trim().toLowerCase()}
+function parseCSV(text){
+ const lines=text.split(/\r?\n/).filter(x=>x.trim());
+ const rows=[];
+ for(const line of lines.slice(1)){
+   const c=line.split("|").map(x=>x.trim());
+   if(c.length>=9) rows.push({freq:Number(c[0])||0,pos:c[1],en:c[2],de:c[3],ru:c[4]});
+ }
+ return rows;
 }
-function reveal(){
- if(revealed)return; const w=words[i]; revealed=true;
- $("roman").textContent=`(${w.romanization})`; $("de").textContent=w.german;
- $("example").innerHTML=`${w.example}<small>${w.exampleGerman}</small>`;
- $("actions").classList.remove("hidden"); $("hint").textContent="";
+function transliterate(s){
+ const m={"а":"a","б":"b","в":"v","г":"g","д":"d","е":"ye","ё":"yo","ж":"zh","з":"z","и":"i","й":"y","к":"k","л":"l","м":"m","н":"n","о":"o","п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"kh","ц":"ts","ч":"ch","ш":"sh","щ":"shch","ъ":"","ы":"y","ь":"","э":"e","ю":"yu","я":"ya"};
+ return [...s.toLowerCase()].map(ch=>m[ch]??ch).join("");
 }
-$("card").onclick=reveal;
-$("speak").onclick=e=>{e.stopPropagation(); if(words[i]) speak(words[i].russian)};
-function speak(text){
- if("speechSynthesis" in window){
-  speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang="ru-RU"; u.rate=.72; speechSynthesis.speak(u);
+function valid(w){
+ const r=clean(w.ru), d=clean(w.de);
+ return r && d && /^[а-яё-]+$/i.test(r) && !/[|<>#&]/.test(r) && r.length<=35 && d.length<=70;
+}
+function exampleFor(w){
+ const templates={
+  noun:"Это слово: «{r}».",verb:"Я хочу {r}.",adjective:"Это {r}.",adverb:"Он говорит {r}.",pronoun:"Это {r}.",preposition:"Слово «{r}» часто используется.",conjunction:"Слово «{r}» соединяет части предложения."
+ };
+ return (templates[w.pos]||"Слово «{r}».").replaceAll("{r}",w.ru);
+}
+function buildWords(rows){
+ const seen=new Set();
+ words=[];
+ for(const w of rows){
+   if(words.length>=LIMIT)break;
+   const r=clean(w.ru);
+   if(!valid(w)||seen.has(r))continue;
+   seen.add(r);
+   words.push({id:words.length+1,russian:r,romanization:transliterate(r),german:w.de,pos:w.pos,example:exampleFor({...w,ru:r}),exampleGerman:""});
  }
 }
-$("no").onclick=()=>next(false); $("yes").onclick=()=>next(true);
-function next(known){
- i=(i+1)%words.length; localStorage.setItem("russianIndex",i); render();
+function getDue(){
+ const now=Date.now(), due=[];
+ for(const w of words){
+   const s=state[w.id];
+   if(!s||s.due<=now) due.push(w);
+ }
+ return due;
 }
-const saved=Number(localStorage.getItem("russianIndex")); if(saved>=0)i=saved;
-</script>
-</body>
-</html>
+function prepareQueue(){
+ const due=getDue();
+ due.sort((a,b)=>(state[a.id]?.due||0)-(state[b.id]?.due||0));
+ queue=due.slice(0,DAILY);
+ if(queue.length<DAILY){
+   const rest=words.filter(w=>!queue.includes(w)).sort(()=>Math.random()-.5);
+   queue.push(...rest.slice(0,DAILY-queue.length));
+ }
+ qIndex=0;render();
+}
+function render(){
+ const w=queue[qIndex];
+ if(!w){$("ru").textContent="Fertig 🎉";$("de").textContent="";return}
+ revealed=false;
+ $("ru").textContent=w.russian;$("roman").textContent="";$("de").textContent="";$("pos").textContent="";
+ $("example").textContent="";$("actions").classList.add("hidden");$("hint").textContent="Tippen auf die Karte, um die Antwort zu sehen";
+ $("counter").textContent=(qIndex+1)+" / "+queue.length;$("progress").max=queue.length;$("progress").value=qIndex;
+ $("today").textContent=state._today===todayKey()?(state._count||0):0;
+ $("learned").textContent=Object.keys(state).filter(k=>k!=="_today"&&state[k]?.level>0).length;
+ $("due").textContent=getDue().length;
+}
+function reveal(){
+ if(revealed||!queue[qIndex])return;
+ const w=queue[qIndex];revealed=true;
+ $("roman").textContent="("+w.romanization+")";$("de").textContent=w.german;$("pos").textContent=w.pos||"";
+ $("example").innerHTML=w.example+"<small>"+(w.exampleGerman||"Beispielsatz")+"</small>";
+ $("actions").classList.remove("hidden");$("hint").textContent="";
+}
+function speak(t){
+ if("speechSynthesis"in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ru-RU";u.rate=.72;speechSynthesis.speak(u)}
+}
+function answer(known){
+ const w=queue[qIndex], old=state[w.id]||{level:0,due:0};
+ const level=known?Math.min((old.level||0)+1,8):0;
+ const days=known?[1,2,4,7,14,30,60,120][level-1]||120:0;
+ state[w.id]={level,due:Date.now()+days*86400000,last:Date.now()};
+ state._today=todayKey();state._count=state._today===todayKey()?(state._count||0)+1:1;
+ save();qIndex++; if(qIndex>=queue.length){prepareQueue()}else render();
+}
+$("card").onclick=()=>reveal();$("speak").onclick=e=>{e.stopPropagation();if(queue[qIndex])speak(queue[qIndex].russian)};
+$("no").onclick=()=>answer(false);$("yes").onclick=()=>answer(true);
+fetch(SOURCE).then(r=>r.text()).then(t=>{buildWords(parseCSV(t));prepareQueue()}).catch(()=>{$("ru").textContent="Fehler beim Laden";$("de").textContent="Bitte Seite neu laden."});
+</script></body></html>
