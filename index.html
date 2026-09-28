@@ -33,7 +33,6 @@ progress{width:100%;height:5px;margin:8px 0 18px;accent-color:#111}
 <div class="footer">2.000 häufige russische Wörter · Fortschritt wird auf diesem Gerät gespeichert</div>
 </main>
 <script>
-const SOURCE="https://gist.github.com/Umkus/5224b8ff035d06ce8e156c25fe6bbd78/raw/66de766d099afd1ae9f3d4f6c01e0afd9f607482/words.csv";
 const LIMIT=2000, DAILY=20;
 let words=[],queue=[],qIndex=0,revealed=false;
 const $=id=>document.getElementById(id);
@@ -41,39 +40,9 @@ const state=JSON.parse(localStorage.getItem("ruSrs")||"{}");
 function save(){localStorage.setItem("ruSrs",JSON.stringify(state))}
 function todayKey(){return new Date().toISOString().slice(0,10)}
 function clean(s){return (s||"").trim().toLowerCase()}
-function parseCSV(text){
- const lines=text.split(/\r?\n/).filter(x=>x.trim());
- const rows=[];
- for(const line of lines.slice(1)){
-   const c=line.split("|").map(x=>x.trim());
-   if(c.length>=9) rows.push({freq:Number(c[0])||0,pos:c[1],en:c[2],de:c[3],ru:c[4]});
- }
- return rows;
-}
 function transliterate(s){
  const m={"а":"a","б":"b","в":"v","г":"g","д":"d","е":"ye","ё":"yo","ж":"zh","з":"z","и":"i","й":"y","к":"k","л":"l","м":"m","н":"n","о":"o","п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"kh","ц":"ts","ч":"ch","ш":"sh","щ":"shch","ъ":"","ы":"y","ь":"","э":"e","ю":"yu","я":"ya"};
  return [...s.toLowerCase()].map(ch=>m[ch]??ch).join("");
-}
-function valid(w){
- const r=clean(w.ru), d=clean(w.de);
- return r && d && /^[а-яё-]+$/i.test(r) && !/[|<>#&]/.test(r) && r.length<=35 && d.length<=70;
-}
-function exampleFor(w){
- const templates={
-  noun:"Это слово: «{r}».",verb:"Я хочу {r}.",adjective:"Это {r}.",adverb:"Он говорит {r}.",pronoun:"Это {r}.",preposition:"Слово «{r}» часто используется.",conjunction:"Слово «{r}» соединяет части предложения."
- };
- return (templates[w.pos]||"Слово «{r}».").replaceAll("{r}",w.ru);
-}
-function buildWords(rows){
- const seen=new Set();
- words=[];
- for(const w of rows){
-   if(words.length>=LIMIT)break;
-   const r=clean(w.ru);
-   if(!valid(w)||seen.has(r))continue;
-   seen.add(r);
-   words.push({id:words.length+1,russian:r,romanization:transliterate(r),german:w.de,pos:w.pos,example:exampleFor({...w,ru:r}),exampleGerman:""});
- }
 }
 function getDue(){
  const now=Date.now(), due=[];
@@ -124,5 +93,16 @@ function answer(known){
 }
 $("card").onclick=()=>reveal();$("speak").onclick=e=>{e.stopPropagation();if(queue[qIndex])speak(queue[qIndex].russian)};
 $("no").onclick=()=>answer(false);$("yes").onclick=()=>answer(true);
-fetch(SOURCE).then(r=>r.text()).then(t=>{buildWords(parseCSV(t));prepareQueue()}).catch(()=>{$("ru").textContent="Fehler beim Laden";$("de").textContent="Bitte Seite neu laden."});
+fetch("words.json").then(r=>r.json()).then(d=>{
+ words=d.slice(0,LIMIT).map((w,i)=>({
+   id:w.id||i+1,
+   russian:w.russian,
+   romanization:w.romanization||transliterate(w.russian),
+   german:w.german,
+   pos:w.pos||"",
+   example:w.example||"",
+   exampleGerman:w.exampleGerman||""
+ }));
+ prepareQueue();
+}).catch(()=>{$("ru").textContent="Fehler beim Laden";$("de").textContent="Bitte words.json prüfen."});
 </script></body></html>
