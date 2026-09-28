@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111111">
+<link rel="manifest" href="manifest.json">
+<title>Russisch Karteikarten</title>
+<style>
+*{box-sizing:border-box} body{margin:0;background:#f2f2f7;color:#111;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif}
+main{max-width:600px;margin:auto;min-height:100vh;padding:20px 16px 28px;display:flex;flex-direction:column}
+header{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:18px}
+.counter{color:#777;font-size:14px;font-weight:500}
+progress{width:100%;height:5px;margin:16px 0 22px;accent-color:#111}
+.card{background:white;border-radius:28px;min-height:440px;padding:34px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 10px 30px #00000012;text-align:center}
+.ru{font-size:52px;font-weight:750;letter-spacing:-1px}.roman{font-size:19px;color:#777;margin-top:8px}.de{font-size:27px;font-weight:650;margin-top:14px}
+.example{border-top:1px solid #eee;margin-top:28px;padding-top:22px;font-size:17px;line-height:1.45}.example small{display:block;color:#777;margin-top:7px}
+.speak{margin-top:25px;width:56px;height:56px;border-radius:50%;border:1px solid #ddd;background:#fff;font-size:23px}
+.hint{text-align:center;color:#888;font-size:13px;margin:18px 0}
+.actions{display:flex;gap:12px}.actions button{flex:1;padding:16px;border-radius:16px;font-size:16px;font-weight:650;border:1px solid #ddd;background:white}.actions .yes{background:#111;color:white;border-color:#111}.actions .no{color:#b00020}
+.hidden{visibility:hidden}
+</style>
+</head>
+<body>
+<main>
+<header><span>🇷🇺 Russisch</span><span class="counter" id="counter"></span></header>
+<progress id="progress" value="1" max="100"></progress>
+<section class="card" id="card">
+<div class="ru" id="ru"></div>
+<div class="roman" id="roman"></div>
+<div class="de" id="de"></div>
+<div class="example" id="example"></div>
+<button class="speak" id="speak" aria-label="Aussprache">🔊</button>
+</section>
+<div class="hint" id="hint">Tippen auf die Karte, um die Antwort zu sehen</div>
+<div class="actions hidden" id="actions">
+<button class="no" id="no">✕ Nochmal</button>
+<button class="yes" id="yes">✓ Gewusst</button>
+</div>
+</main>
+<script>
+let words=[], i=0, revealed=false;
+const $=id=>document.getElementById(id);
+fetch("words.json").then(r=>r.json()).then(d=>{words=d; render()});
+function render(){
+ const w=words[i]; revealed=false;
+ $("ru").textContent=w.russian; $("roman").textContent=""; $("de").textContent="";
+ $("example").innerHTML=""; $("actions").classList.add("hidden"); $("hint").textContent="Tippen auf die Karte, um die Antwort zu sehen";
+ $("counter").textContent=`${i+1} / ${words.length}`; $("progress").max=words.length; $("progress").value=i+1;
+}
+function reveal(){
+ if(revealed)return; const w=words[i]; revealed=true;
+ $("roman").textContent=`(${w.romanization})`; $("de").textContent=w.german;
+ $("example").innerHTML=`${w.example}<small>${w.exampleGerman}</small>`;
+ $("actions").classList.remove("hidden"); $("hint").textContent="";
+}
+$("card").onclick=reveal;
+$("speak").onclick=e=>{e.stopPropagation(); if(words[i]) speak(words[i].russian)};
+function speak(text){
+ if("speechSynthesis" in window){
+  speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(text); u.lang="ru-RU"; u.rate=.72; speechSynthesis.speak(u);
+ }
+}
+$("no").onclick=()=>next(false); $("yes").onclick=()=>next(true);
+function next(known){
+ i=(i+1)%words.length; localStorage.setItem("russianIndex",i); render();
+}
+const saved=Number(localStorage.getItem("russianIndex")); if(saved>=0)i=saved;
+</script>
+</body>
+</html>
