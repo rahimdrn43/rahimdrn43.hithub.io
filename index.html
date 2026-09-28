@@ -22,7 +22,7 @@ progress{width:100%;height:5px;margin:8px 0 18px;accent-color:#111}
 </head>
 <body><main>
 <header><span>🇷🇺 Russisch</span><span class="counter" id="counter"></span></header>
-<div class="stats"><div class="stat">Heute<b id="today">0</b></div><div class="stat">Gelernt<b id="learned">0</b></div><div class="stat">Noch offen<b id="due">0</b></div></div>
+<div class="stats"><div class="stat">Heute<b id="today">0</b></div><div class="stat">Lernblock<b id="block">0 / 50</b></div><div class="stat">Fällig<b id="due">0</b></div></div>
 <progress id="progress" value="0" max="20"></progress>
 <section class="card" id="card">
 <div class="ru" id="ru">Lade Wörter…</div><div class="roman" id="roman"></div><div class="de" id="de"></div><div class="pos" id="pos"></div>
@@ -30,10 +30,10 @@ progress{width:100%;height:5px;margin:8px 0 18px;accent-color:#111}
 </section>
 <div class="hint" id="hint">Tippen auf die Karte, um die Antwort zu sehen</div>
 <div class="actions hidden" id="actions"><button class="no" id="no">✕ Nochmal</button><button class="yes" id="yes">✓ Gewusst</button></div>
-<div class="footer">2.000 häufige russische Wörter · Fortschritt wird auf diesem Gerät gespeichert</div>
+<div class="footer">50er-Lernblöcke · 2× richtig = nächste Stufe · Spaced Repetition</div>
 </main>
 <script>
-const LIMIT=2000, DAILY=20;
+const LIMIT=2000, DAILY=20, BLOCK_SIZE=50, RETRY_GAP=3, REVIEW_GAPS=[100,200,400,800,1600,3200];
 let words=[],queue=[],qIndex=0,revealed=false;
 const $=id=>document.getElementById(id);
 const state=JSON.parse(localStorage.getItem("ruSrs")||"{}");
@@ -44,22 +44,36 @@ function transliterate(s){
  const m={"а":"a","б":"b","в":"v","г":"g","д":"d","е":"ye","ё":"yo","ж":"zh","з":"z","и":"i","й":"y","к":"k","л":"l","м":"m","н":"n","о":"o","п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"kh","ц":"ts","ч":"ch","ш":"sh","щ":"shch","ъ":"","ы":"y","ь":"","э":"e","ю":"yu","я":"ya"};
  return [...s.toLowerCase()].map(ch=>m[ch]??ch).join("");
 }
-function getDue(){
- const now=Date.now(), due=[];
+function totalAnswers(){return state._total||0}
+function ensureV2(){
+ if(state._v2)return;
+ state._v2=1; state._total=0; state._graduated=0; state._nextNew=1; state._active=[];
  for(const w of words){
-   const s=state[w.id];
-   if(!s||s.due<=now) due.push(w);
+   const old=state[w.id];
+   if(old){
+     if((old.level||0)>0) state[w.id]={stage:2,reviewLevel:Math.min(old.level||1,REVIEW_GAPS.length),reviewAt:100,last:old.last||0,wrong:0};
+     else state[w.id]={stage:0,active:true,availableAt:0,wrong:0};
+     state._nextNew=Math.max(state._nextNew,w.id+1);
+   }
  }
- return due;
+ fillActive();save();
+}
+function fillActive(){
+ const active=state._active||[];
+ for(const w of words){if(active.length>=BLOCK_SIZE)break;if(state[w.id]?.active&&!active.includes(w.id))active.push(w.id);}
+ let i=Math.max(1,state._nextNew||1);
+ while(active.length<BLOCK_SIZE&&i<=words.length){if(!state[i]){state[i]={stage:0,active:true,availableAt:totalAnswers()};active.push(i)}i++}
+ state._nextNew=Math.max(state._nextNew||1,i);state._active=active;
+}
+function blockProgress(){return (state._graduated||0)%BLOCK_SIZE}
+function getDue(){
+ const due=[];for(const w of words){const s=state[w.id];if(s&&(s.active&&(s.availableAt||0)<=totalAnswers()||(s.stage===2&&(s.reviewAt||0)<=totalAnswers())))due.push(w)}return due;
 }
 function prepareQueue(){
- const due=getDue();
- due.sort((a,b)=>(state[a.id]?.due||0)-(state[b.id]?.due||0));
- queue=due.slice(0,DAILY);
- if(queue.length<DAILY){
-   const rest=words.filter(w=>!queue.includes(w)).sort(()=>Math.random()-.5);
-   queue.push(...rest.slice(0,DAILY-queue.length));
- }
+ fillActive();const due=getDue();const activeDue=due.filter(w=>state[w.id]?.active);const reviews=due.filter(w=>state[w.id]?.stage===2);
+ activeDue.sort((a,b)=>(state[a.id].availableAt||0)-(state[b.id].availableAt||0));reviews.sort((a,b)=>(state[a.id].reviewAt||0)-(state[b.id].reviewAt||0));
+ queue=[...activeDue,...reviews].slice(0,DAILY);
+ if(queue.length<DAILY){const rest=state._active.map(id=>words.find(w=>w.id===id)).filter(Boolean).filter(w=>!queue.includes(w));rest.sort(()=>Math.random()-.5);queue.push(...rest.slice(0,DAILY-queue.length))}
  qIndex=0;render();
 }
 function render(){
@@ -84,12 +98,14 @@ function speak(t){
  if("speechSynthesis"in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang="ru-RU";u.rate=.72;speechSynthesis.speak(u)}
 }
 function answer(known){
- const w=queue[qIndex], old=state[w.id]||{level:0,due:0};
- const level=known?Math.min((old.level||0)+1,8):0;
- const days=known?[1,2,4,7,14,30,60,120][level-1]||120:0;
- state[w.id]={level,due:Date.now()+days*86400000,last:Date.now()};
- state._today=todayKey();state._count=state._today===todayKey()?(state._count||0)+1:1;
- save();qIndex++; if(qIndex>=queue.length){prepareQueue()}else render();
+ const w=queue[qIndex],s=state[w.id]||{stage:0,active:true,availableAt:totalAnswers()};
+ state._total=totalAnswers()+1;s.last=Date.now();
+ if(known){
+   if(s.stage<2){s.stage=(s.stage||0)+1;if(s.stage>=2){s.stage=2;s.active=false;s.reviewLevel=1;s.reviewAt=totalAnswers()+REVIEW_GAPS[0];state._active=state._active.filter(id=>id!==w.id);state._graduated=(state._graduated||0)+1;fillActive()}else{s.active=true;s.availableAt=totalAnswers()+5}}
+   else{s.reviewLevel=Math.min((s.reviewLevel||1)+1,REVIEW_GAPS.length);s.reviewAt=totalAnswers()+(REVIEW_GAPS[(s.reviewLevel||1)-1]||3200)}
+ }else{s.wrong=(s.wrong||0)+1;s.stage=0;s.active=true;s.availableAt=totalAnswers()+RETRY_GAP;if(!state._active.includes(w.id))state._active.push(w.id)}
+ state[w.id]=s;state._today=todayKey();state._count=(state._count||0)+1;fillActive();save();
+ qIndex++;if(qIndex>=queue.length)prepareQueue();else render();
 }
 $("card").onclick=()=>reveal();$("speak").onclick=e=>{e.stopPropagation();if(queue[qIndex])speak(queue[qIndex].russian)};
 $("no").onclick=()=>answer(false);$("yes").onclick=()=>answer(true);
