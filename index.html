@@ -123,7 +123,7 @@ function render(){
  $("example").textContent="";$("actions").classList.add("hidden");$("hint").textContent="Tippen auf die Karte, um die Antwort zu sehen";
  $("counter").textContent=(qIndex+1)+" / "+queue.length;$("progress").max=queue.length;$("progress").value=qIndex;
  $("today").textContent=state._today===todayKey()?(state._count||0):0;
- $("learned").textContent=Object.keys(state).filter(k=>k!=="_today"&&state[k]?.level>0).length;
+ $("block").textContent=blockProgress()+" / "+BLOCK_SIZE;
  $("due").textContent=getDue().length;
 }
 function reveal(){
