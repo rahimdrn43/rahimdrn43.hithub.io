@@ -30,7 +30,7 @@ progress{width:100%;height:5px;margin:8px 0 18px;accent-color:#111}
 </section>
 <div class="hint" id="hint">Tippen auf die Karte, um die Antwort zu sehen</div>
 <div class="actions hidden" id="actions"><button class="no" id="no">✕ Nochmal</button><button class="yes" id="yes">✓ Gewusst</button></div>
-<div class="footer">50er-Lernblöcke · 2× richtig = nächste Stufe · Spaced Repetition</div>
+<div class="footer">50er-Lernblöcke · Schwierige Wörter kommen häufiger · Spaced Repetition</div>
 </main>
 <script>
 const LIMIT=2000, DAILY=20, BLOCK_SIZE=50, RETRY_GAP=3, REVIEW_GAPS=[100,200,400,800,1600,3200];
@@ -71,7 +71,7 @@ function getDue(){
 }
 function prepareQueue(){
  fillActive();const due=getDue();const activeDue=due.filter(w=>state[w.id]?.active);const reviews=due.filter(w=>state[w.id]?.stage===2);
- activeDue.sort((a,b)=>(state[a.id].availableAt||0)-(state[b.id].availableAt||0));reviews.sort((a,b)=>(state[a.id].reviewAt||0)-(state[b.id].reviewAt||0));
+ activeDue.sort((a,b)=>{const sa=state[a.id],sb=state[b.id];const pa=(sa.wrong||0)*100000-(sa.availableAt||0);const pb=(sb.wrong||0)*100000-(sb.availableAt||0);return pb-pa;});reviews.sort((a,b)=>(state[a.id].reviewAt||0)-(state[b.id].reviewAt||0));
  queue=[...activeDue,...reviews].slice(0,DAILY);
  if(queue.length<DAILY){const rest=state._active.map(id=>words.find(w=>w.id===id)).filter(Boolean).filter(w=>!queue.includes(w));rest.sort(()=>Math.random()-.5);queue.push(...rest.slice(0,DAILY-queue.length))}
  qIndex=0;render();
@@ -103,7 +103,7 @@ function answer(known){
  if(known){
    if(s.stage<2){s.stage=(s.stage||0)+1;if(s.stage>=2){s.stage=2;s.active=false;s.reviewLevel=1;s.reviewAt=totalAnswers()+REVIEW_GAPS[0];state._active=state._active.filter(id=>id!==w.id);state._graduated=(state._graduated||0)+1;fillActive()}else{s.active=true;s.availableAt=totalAnswers()+5}}
    else{s.reviewLevel=Math.min((s.reviewLevel||1)+1,REVIEW_GAPS.length);s.reviewAt=totalAnswers()+(REVIEW_GAPS[(s.reviewLevel||1)-1]||3200)}
- }else{s.wrong=(s.wrong||0)+1;s.stage=0;s.active=true;s.availableAt=totalAnswers()+RETRY_GAP;if(!state._active.includes(w.id))state._active.push(w.id)}
+ }else{s.wrong=(s.wrong||0)+1;s.stage=0;s.active=true;s.availableAt=totalAnswers()+Math.max(1,Math.min(3,4-s.wrong));if(!state._active.includes(w.id))state._active.push(w.id)}
  state[w.id]=s;state._today=todayKey();state._count=(state._count||0)+1;fillActive();save();
  qIndex++;if(qIndex>=queue.length)prepareQueue();else render();
 }
