@@ -130,8 +130,8 @@ function reveal(){
  if(revealed||!queue[qIndex])return;
  const w=queue[qIndex];revealed=true;
  $("roman").textContent="("+w.romanization+")";$("de").textContent=w.german;$("pos").textContent=w.pos||"";
- $("example").innerHTML=w.example+"<small>"+(w.exampleGerman||"Beispielsatz")+"</small>";
- const c=presentConjugation(w.russian); $("conj").innerHTML=c?"<b>Präsens</b><br>"+c.map(x=>x).join("<br>"):""; $("conj").style.display=c?"block":"none";
+ const c=presentConjugation(w.russian);
+ $("example").innerHTML=w.example+"<small>"+(w.exampleGerman||"Beispielsatz")+"</small>"+(c?"<div class=\"conj\"><b>Präsens</b><br>"+c.join("<br>")+"</div>":"");
  $("actions").classList.remove("hidden");$("hint").textContent="";
 }
 function speak(t){
