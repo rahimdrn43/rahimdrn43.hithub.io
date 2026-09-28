@@ -14,7 +14,7 @@ header{display:flex;justify-content:space-between;align-items:center;font-weight
 progress{width:100%;height:5px;margin:8px 0 18px;accent-color:#111}
 .card{background:#fff;border-radius:28px;min-height:430px;padding:30px 22px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 10px 30px #00000012;text-align:center;cursor:pointer}
 .ru{font-size:50px;font-weight:750;letter-spacing:-1px}.roman{font-size:18px;color:#777;margin-top:8px}.de{font-size:28px;font-weight:650;margin-top:14px}.pos{font-size:12px;color:#999;margin-top:7px;text-transform:capitalize}
-.example{border-top:1px solid #eee;margin-top:25px;padding-top:19px;font-size:16px;line-height:1.45;color:#444}.example small{display:block;color:#888;margin-top:7px}
+.example{border-top:1px solid #eee;margin-top:25px;padding-top:19px;font-size:16px;line-height:1.45;color:#444}.example small{display:block;color:#888;margin-top:7px}.conj{margin-top:15px;padding-top:14px;border-top:1px solid #eee;text-align:left;font-size:14px;line-height:1.55;color:#555}.conj b{color:#111}
 .speak{margin-top:23px;width:54px;height:54px;border-radius:50%;border:1px solid #ddd;background:#fff;font-size:22px;cursor:pointer}
 .hint{text-align:center;color:#888;font-size:13px;margin:16px 0}.actions{display:flex;gap:10px}.actions button{flex:1;padding:15px;border-radius:16px;font-size:16px;font-weight:650;border:1px solid #ddd;background:#fff;cursor:pointer}.actions .yes{background:#111;color:#fff;border-color:#111}.actions .no{color:#b00020}
 .hidden{visibility:hidden}.footer{text-align:center;color:#aaa;font-size:11px;margin-top:15px}
@@ -26,7 +26,7 @@ progress{width:100%;height:5px;margin:8px 0 18px;accent-color:#111}
 <progress id="progress" value="0" max="20"></progress>
 <section class="card" id="card">
 <div class="ru" id="ru">Lade Wörter…</div><div class="roman" id="roman"></div><div class="de" id="de"></div><div class="pos" id="pos"></div>
-<div class="example" id="example"></div><button class="speak" id="speak" aria-label="Aussprache">🔊</button>
+<div class="example" id="example"></div><div class="conj" id="conj" style="display:none"></div><button class="speak" id="speak" aria-label="Aussprache">🔊</button>
 </section>
 <div class="hint" id="hint">Tippen auf die Karte, um die Antwort zu sehen</div>
 <div class="actions hidden" id="actions"><button class="no" id="no">✕ Nochmal</button><button class="yes" id="yes">✓ Gewusst</button></div>
@@ -40,6 +40,45 @@ const state=JSON.parse(localStorage.getItem("ruSrs")||"{}");
 function save(){localStorage.setItem("ruSrs",JSON.stringify(state))}
 function todayKey(){return new Date().toISOString().slice(0,10)}
 function clean(s){return (s||"").trim().toLowerCase()}
+function presentConjugation(v){
+ v=v.trim().toLowerCase();
+ const special={
+  "быть":["я есть","ты есть","он/она есть","мы есть","вы есть","они есть"],
+  "идти":["я иду","ты идёшь","он/она идёт","мы идём","вы идёте","они идут"],
+  "ехать":["я еду","ты едешь","он/она едет","мы едем","вы едете","они едут"],
+  "есть":["я ем","ты ешь","он/она ест","мы едим","вы едите","они едят"],
+  "хотеть":["я хочу","ты хочешь","он/она хочет","мы хотим","вы хотите","они хотят"],
+  "мочь":["я могу","ты можешь","он/она может","мы можем","вы можете","они могут"],
+  "говорить":["я говорю","ты говоришь","он/она говорит","мы говорим","вы говорите","они говорят"],
+  "любить":["я люблю","ты любишь","он/она любит","мы любим","вы любите","они любят"],
+  "смотреть":["я смотрю","ты смотришь","он/она смотрит","мы смотрим","вы смотрите","они смотрят"],
+  "писать":["я пишу","ты пишешь","он/она пишет","мы пишем","вы пишете","они пишут"],
+  "читать":["я читаю","ты читаешь","он/она читает","мы читаем","вы читаете","они читают"],
+  "делать":["я делаю","ты делаешь","он/она делает","мы делаем","вы делаете","они делают"],
+  "знать":["я знаю","ты знаешь","он/она знает","мы знаем","вы знаете","они знают"],
+  "жить":["я живу","ты живёшь","он/она живёт","мы живём","вы живёте","они живут"],
+  "пить":["я пью","ты пьёшь","он/она пьёт","мы пьём","вы пьёте","они пьют"],
+  "говорить":["я говорю","ты говоришь","он/она говорит","мы говорим","вы говорите","они говорят"],
+  "видеть":["я вижу","ты видишь","он/она видит","мы видим","вы видите","они видят"],
+  "понимать":["я понимаю","ты понимаешь","он/она понимает","мы понимаем","вы понимаете","они понимают"],
+  "понимать":["я понимаю","ты понимаешь","он/она понимает","мы понимаем","вы понимаете","они понимают"],
+  "учить":["я учу","ты учишь","он/она учит","мы учим","вы учите","они учат"],
+  "учиться":["я учусь","ты учишься","он/она учится","мы учимся","вы учитесь","они учатся"],
+  "работать":["я работаю","ты работаешь","он/она работает","мы работаем","вы работаете","они работают"],
+  "звонить":["я звоню","ты звонишь","он/она звонит","мы звоним","вы звоните","они звонят"],
+  "купить":["я куплю","ты купишь","он/она купит","мы купим","вы купите","они купят"],
+  "говорить":["я говорю","ты говоришь","он/она говорит","мы говорим","вы говорите","они говорят"],
+  "сказать":["я скажу","ты скажешь","он/она скажет","мы скажем","вы скажете","они скажут"]
+ };
+ if(special[v])return special[v];
+ if(!/ть$/.test(v))return null;
+ let stem=v.slice(0,-2), second=/ить$/.test(v)||/еть$/.test(v)&&/видеть|смотреть|сидеть|лететь|терпеть|зависеть/.test(v);
+ if(second){
+   let base=stem;
+   return ["я "+base+"ю","ты "+base+"ишь","он/она "+base+"ит","мы "+base+"им","вы "+base+"ите","они "+base+"ят"];
+ }
+ return ["я "+stem+"ю","ты "+stem+"ешь","он/она "+stem+"ет","мы "+stem+"ем","вы "+stem+"ете","они "+stem+"ют"];
+}
 function transliterate(s){
  const m={"а":"a","б":"b","в":"v","г":"g","д":"d","е":"ye","ё":"yo","ж":"zh","з":"z","и":"i","й":"y","к":"k","л":"l","м":"m","н":"n","о":"o","п":"p","р":"r","с":"s","т":"t","у":"u","ф":"f","х":"kh","ц":"ts","ч":"ch","ш":"sh","щ":"shch","ъ":"","ы":"y","ь":"","э":"e","ю":"yu","я":"ya"};
  return [...s.toLowerCase()].map(ch=>m[ch]??ch).join("");
@@ -91,7 +130,7 @@ function reveal(){
  if(revealed||!queue[qIndex])return;
  const w=queue[qIndex];revealed=true;
  $("roman").textContent="("+w.romanization+")";$("de").textContent=w.german;$("pos").textContent=w.pos||"";
- $("example").innerHTML=w.example+"<small>"+(w.exampleGerman||"Beispielsatz")+"</small>";
+ $("example").innerHTML=w.example+"<small>"+(w.exampleGerman||"Beispielsatz")+"</small>";\n const c=presentConjugation(w.russian); $("conj").innerHTML=c?"<b>Präsens</b><br>"+c.map(x=>x).join("<br>"):""; $("conj").style.display=c?"block":"none";
  $("actions").classList.remove("hidden");$("hint").textContent="";
 }
 function speak(t){
