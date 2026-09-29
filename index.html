@@ -110,7 +110,7 @@ function getDue(){
 }
 function prepareQueue(){
  fillActive();const due=getDue();const activeDue=due.filter(w=>state[w.id]?.active);const reviews=due.filter(w=>state[w.id]?.stage===2);
- activeDue.sort((a,b)=>{const sa=state[a.id],sb=state[b.id];const pa=(sa.wrong||0)*100000-(sa.availableAt||0);const pb=(sb.wrong||0)*100000-(sb.availableAt||0);return pb-pa;});reviews.sort((a,b)=>(state[a.id].reviewAt||0)-(state[b.id].reviewAt||0));
+ const priorityShuffle=(a,b)=>{const wa=state[a.id]?.wrong||0,wb=state[b.id]?.wrong||0;if(wa!==wb)return wb-wa;return Math.random()-.5;};activeDue.sort(priorityShuffle);reviews.sort((a,b)=>{const ra=state[a.id].reviewAt||0,rb=state[b.id].reviewAt||0;if(ra!==rb)return ra-rb;return Math.random()-.5;});
  queue=[...activeDue,...reviews].slice(0,DAILY);
  if(queue.length<DAILY){const rest=state._active.map(id=>words.find(w=>w.id===id)).filter(Boolean).filter(w=>!queue.includes(w));rest.sort(()=>Math.random()-.5);queue.push(...rest.slice(0,DAILY-queue.length))}
  qIndex=0;render();
