@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111111">
 <link rel="manifest" href="manifest.json">
-<title>Russisch 2000</title>
+<title>Russisch 1000</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f2f2f7;color:#111;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif}
 main{max-width:620px;margin:auto;min-height:100vh;padding:18px 16px 28px;display:flex;flex-direction:column}
@@ -33,7 +33,7 @@ progress{width:100%;height:5px;margin:8px 0 18px;accent-color:#111}
 <div class="footer">50er-Lernblöcke · Schwierige Wörter kommen häufiger · Spaced Repetition</div>
 </main>
 <script>
-const LIMIT=2000, DAILY=20, BLOCK_SIZE=50, RETRY_GAP=3, REVIEW_GAPS=[100,200,400,800,1600,3200];
+const LIMIT=1000, DAILY=20, BLOCK_SIZE=50, RETRY_GAP=3, REVIEW_GAPS=[100,200,400,800,1600,3200];
 let words=[],queue=[],qIndex=0,revealed=false;
 const $=id=>document.getElementById(id);
 const state=JSON.parse(localStorage.getItem("ruSrs")||"{}");
